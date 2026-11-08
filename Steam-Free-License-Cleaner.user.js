@@ -2,15 +2,13 @@
 // @name         Steam-Free-License-Cleaner-Bulk-Remove-Free-Steam-Licenses
 // @name:zh-CN   Steam 免费游戏批量删除 / 一键清库存脚本
 // @namespace    https://github.com/LunaLi-hub/Steam-Free-License-Cleaner-Bulk-Remove-Free-Steam-Licenses
-// @version      3.0
-// @description  Unified filter toolbar (search / category / acquisition method / date range) on every tab, works before and during cleaning. Select-all / invert / clear act on the filtered list; add checked to skip / move back out of skip. Delay stays at the base value unless error 84 (rate limit) happens.
-// @description:zh-CN  统一筛选工具栏（搜索/分类/获取方式/日期区间），所有页签在清理前后均可筛选；全选/反选/清空作用于筛选结果；勾选项可加入跳过/移出跳过。只有触发错误84才会降速，否则保持基础间隔。
+// @version      4.0
+// @description  Unified filter toolbar (search / category / acquisition method / date range) on every tab, works before and during cleaning. Select-all / invert / clear act on the filtered list; add checked to skip / move back out of skip. Delay stays at the base value unless error 84 (rate limit) happens. v3.1: paginated list with page jump and page-size selector (pure local view, never resets cleaning).
+// @description:zh-CN  统一筛选工具栏（搜索/分类/获取方式/日期区间），所有页签在清理前后均可筛选；全选/反选/清空作用于筛选结果；勾选项可加入跳过/移出跳过。只有触发错误84才会降速，否则保持基础间隔。v3.1：列表支持翻页、页码跳转和每页条数选择（纯本地视图，翻页不会重置清理）。
 // @author       luna
 // @match        https://store.steampowered.com/account/licenses/*
 // @grant        none
 // @license      MIT
-// @downloadURL https://update.greasyfork.org/scripts/603249/Steam-Free-License-Cleaner.user.js
-// @updateURL https://update.greasyfork.org/scripts/603249/Steam-Free-License-Cleaner.meta.js
 // ==/UserScript==
 
 (function () {
@@ -160,9 +158,9 @@
             sel_info: n => `${n} checked`,
             sel_hidden: h => ` (${h} hidden by filter)`,
             sel_all: 'Select all', sel_inv: 'Invert', sel_none: 'Clear',
-            tip_selAll: 'Check every item currently shown (after filtering)',
-            tip_selInv: 'Invert the check state of the items currently shown',
-            tip_selNone: 'Uncheck the items currently shown',
+            tip_selAll: 'Check every item currently shown (after filtering, across all pages)',
+            tip_selInv: 'Invert the check state of the items currently shown (after filtering, across all pages)',
+            tip_selNone: 'Uncheck the items currently shown (after filtering, across all pages)',
             noSelection: 'Nothing selected — pick at least one item.',
             q_label: 'Quick clean:',
             q_demo: 'Only Demo/Trailer', q_soundtrack: 'Only Soundtrack', q_dlc: 'Only DLC', q_tool: 'Only Tool',
@@ -186,7 +184,20 @@
             f_from: 'From', f_to: 'To',
             f_clear: 'Clear filter',
             notScanned: 'Not scanned yet — press "Scan list only" first.',
-            fInfo: (a, b) => `Showing ${a} / ${b}`
+            fInfo: (a, b) => `Showing ${a} / ${b}`,
+            pg_page: (p, n, total) => `Page ${p} / ${n} (${total} items)`,
+            pg_size: n => `${n} / page`,
+            pg_jump: 'Go to page',
+            nat_page: (p, n) => `Page ${p} / ${n}`, nat_go: 'Go',
+            nat_loading: 'Loading pages…',
+            nat_cacheonly: 'Scan/cleaning in progress: only pages already read can be opened.',
+            nat_wait: 'Please press "Scan list only" first to read all pages.',
+            nat_scanfirst: 'Please press "Scan list only" first to read all pages.',
+            nat_err: 'Could not load that page. Try again later.',
+            nat_scanhint: 'Press "Scan list only" first; paging works once the scan finishes.',
+            nat_ready: 'Press "Scan list only" first; paging works once the scan finishes.',
+            nat_single: 'No next-page link found: only one page, or the page layout differs.',
+            nat_notable: 'Original license table not found; page turner disabled.'
         },
         zh: {
             title: '库存清理器',
@@ -269,9 +280,9 @@
             sel_info: n => `已勾选 ${n}`,
             sel_hidden: h => `（另有 ${h} 个被筛选隐藏）`,
             sel_all: '全选', sel_inv: '反选', sel_none: '清空',
-            tip_selAll: '勾选当前显示（筛选后）的所有项目',
-            tip_selInv: '反选当前显示的项目',
-            tip_selNone: '取消勾选当前显示的项目',
+            tip_selAll: '勾选筛选后的所有项目（含所有页）',
+            tip_selInv: '反选筛选后的所有项目（含所有页）',
+            tip_selNone: '取消勾选筛选后的所有项目（含所有页）',
             noSelection: '没有选中任何项目——请至少勾选一项。',
             q_label: '快捷清理：',
             q_demo: '仅删试玩/预告', q_soundtrack: '仅删原声', q_dlc: '仅删 DLC', q_tool: '仅删工具',
@@ -295,7 +306,20 @@
             f_from: '从', f_to: '到',
             f_clear: '清除筛选',
             notScanned: '尚未扫描——请先点击「仅扫描列表」。',
-            fInfo: (a, b) => `显示 ${a} / ${b}`
+            fInfo: (a, b) => `显示 ${a} / ${b}`,
+            pg_page: (p, n, total) => `第 ${p} / ${n} 页（共 ${total} 条）`,
+            pg_size: n => `每页 ${n} 条`,
+            pg_jump: '跳转到页',
+            nat_page: (p, n) => `第 ${p} / ${n} 页`, nat_go: '跳转',
+            nat_loading: '正在加载分页…',
+            nat_cacheonly: '正在扫描/清理：只能翻已经读取完的页面。',
+            nat_wait: '请先点「仅扫描列表」读取所有页，之后才能翻页。',
+            nat_scanfirst: '请先点「仅扫描列表」读取所有页，之后才能翻页。',
+            nat_err: '该页加载失败，请稍后再试。',
+            nat_scanhint: '请先点「仅扫描列表」，扫描完成后即可翻页。',
+            nat_ready: '请先点「仅扫描列表」，扫描完成后即可翻页。',
+            nat_single: '没找到下一页链接：只有一页，或页面结构不同。',
+            nat_notable: '没找到原授权表格，翻页功能已停用。'
         }
     };
 
@@ -304,7 +328,7 @@
         skipped: [], removed: 0, minGap: 0,
         coolLevel: 0, cooldownUntil: 0, lastCoolAt: 0,
         delaySec: CFG.delaySec, coolMin: CFG.coolMin, coolMaxMin: CFG.coolMaxMin,
-        skippedInfo: {}, skippedMeta: {}, lang: 'en'
+        skippedInfo: {}, skippedMeta: {}, lang: 'en', pageSize: 50
     };
     function loadState() {
         try {
@@ -321,6 +345,8 @@
     if (typeof state.coolMaxMin !== 'number' || !(state.coolMaxMin >= 1)) state.coolMaxMin = CFG.coolMaxMin;
     if (state.coolMaxMin > CFG.coolMaxLimit) state.coolMaxMin = CFG.coolMaxLimit;
     if (state.coolMin > state.coolMaxMin) state.coolMin = state.coolMaxMin;
+    if (![20, 50, 100, 200, 500].includes(Number(state.pageSize))) state.pageSize = 50;
+    state.pageSize = Number(state.pageSize);
     const skipSet = new Set(state.skipped);
     if (!state.skippedInfo || typeof state.skippedInfo !== 'object') state.skippedInfo = {};
     if (!state.skippedMeta || typeof state.skippedMeta !== 'object') state.skippedMeta = {};
@@ -539,12 +565,26 @@
     #slc .slc-empty,#slc .slc-more{padding:18px 16px;color:#56707f;text-align:center}
     #slc .slc-morebtn{border:1px solid rgba(103,193,245,.3);background:rgba(103,193,245,.1);color:#67c1f5;border-radius:2px;padding:3px 12px;font-size:12px;cursor:pointer;font-family:inherit;margin-left:6px}
     #slc .slc-morebtn:hover{background:rgba(103,193,245,.25);color:#fff}
-    @media (max-width:640px){#slc .slc-stats{grid-template-columns:repeat(2,1fr)}#slc .slc-set{margin-left:0}#slc .slc-row{grid-template-columns:minmax(0,1fr) 120px}#slc .slc-row .i{display:none}#slc .slc-row.sel{grid-template-columns:24px minmax(0,1fr) 120px}#slc .slc-toolbar .slc-search{width:100%}#slc .slc-tgroup + .slc-tgroup{padding-left:0;border-left:0}#slc .slc-selinfo{margin-left:0}#slc .slc-meta{flex-direction:column;gap:3px}#slc .slc-meta span:last-child{max-width:100%;text-align:left}}
+    #slc .slc-pager{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-top:1px solid rgba(0,0,0,.4);background:rgba(0,0,0,.2);font-size:12px;color:#8f98a0}
+    #slc .slc-pager button{border:1px solid rgba(103,193,245,.3);background:rgba(103,193,245,.1);color:#67c1f5;border-radius:2px;padding:3px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+    #slc .slc-pager button:hover:not(:disabled){background:rgba(103,193,245,.25);color:#fff}
+    #slc .slc-pager button:disabled{opacity:.35;cursor:default}
+    #slc .slc-pager input,#slc .slc-pager select{padding:3px 6px;border-radius:2px;border:1px solid #000;background:rgba(0,0,0,.35);color:#fff;font-size:12px;font-family:inherit;color-scheme:dark}
+    #slc .slc-pager input{width:56px}
+    #slc .slc-pager .slc-pgsp{margin-left:auto}
+    #slc-natbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0;padding:8px 12px;border-radius:3px;background:rgba(22,32,45,.9);border:1px solid rgba(102,192,244,.18);color:#8f98a0;font-size:12px;font-family:"Motiva Sans",Arial,Helvetica,sans-serif}
+    #slc-natbar button{border:1px solid rgba(103,193,245,.3);background:rgba(103,193,245,.1);color:#67c1f5;border-radius:2px;padding:3px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+    #slc-natbar button:hover:not(:disabled){background:rgba(103,193,245,.25);color:#fff}
+    #slc-natbar button:disabled{opacity:.35;cursor:default}
+    #slc-natbar input{width:56px;padding:3px 6px;border-radius:2px;border:1px solid #000;background:rgba(0,0,0,.35);color:#fff;font-size:12px;color-scheme:dark}
+    #slc-natbar .nat-hint{color:#ffc82c}
+    @media (max-width:640px){#slc .slc-stats{grid-template-columns:repeat(2,1fr)}#slc .slc-set{margin-left:0}#slc .slc-row{grid-template-columns:minmax(0,1fr) 120px}#slc .slc-row .i{display:none}#slc .slc-row.sel{grid-template-columns:24px minmax(0,1fr) 120px}#slc .slc-toolbar .slc-search{width:100%}#slc .slc-tgroup + .slc-tgroup{padding-left:0;border-left:0}#slc .slc-selinfo{margin-left:0}#slc .slc-meta{flex-direction:column;gap:3px}#slc .slc-meta span:last-child{max-width:100%;text-align:left}#slc .slc-pager .slc-pgsp{margin-left:0}}
     `;
 
     function buildUI() {
         const titleElem = document.querySelector('.page_content > h2');
         if (!titleElem) return;
+        natInit(); // must run before our panel is inserted, while the native table is still untouched
         const style = document.createElement('style');
         style.textContent = CSS;
         document.head.appendChild(style);
@@ -555,7 +595,7 @@
           <div class="slc-head">
             <div class="slc-title">
               <svg viewBox="0 0 24 24"><path d="M9 3h6l1 2h4v2H4V5h4l1-2zm-3 6h12l-1 12H7L6 9zm4 2v8h1.5v-8H10zm3.5 0v8H15v-8h-1.5z"/></svg>
-              <span data-i18n="title"></span><em>v3.0</em>
+              <span data-i18n="title"></span><em>v4.0</em>
             </div>
             <div class="slc-headr">
               <button class="slc-lang" data-k="lang" title="English / 中文"></button>
@@ -589,13 +629,6 @@
             </div>
             <button class="slc-btn slc-ghost" data-k="clearlog" data-i18n="btn_clearLog" data-i18n-title="tip_clearLog"></button>
           </div>
-          <div class="slc-quickbar">
-            <span class="slc-quicklabel" data-i18n="q_label"></span>
-            <button class="slc-quickbtn q-demo" data-k="qDemo" data-i18n="q_demo"></button>
-            <button class="slc-quickbtn q-sound" data-k="qSound" data-i18n="q_soundtrack"></button>
-            <button class="slc-quickbtn q-dlc" data-k="qDlc" data-i18n="q_dlc"></button>
-            <button class="slc-quickbtn q-tool" data-k="qTool" data-i18n="q_tool"></button>
-          </div>
           <div class="slc-tabs">
             <button class="slc-tab on" data-tab="log"><span data-i18n="tab_log"></span></button>
             <button class="slc-tab" data-tab="pending"><span data-i18n="tab_pending"></span><em>0</em></button>
@@ -623,14 +656,15 @@
             <span class="slc-selinfo" data-k="selinfo"></span>
           </div>
           <div class="slc-log" data-k="log"></div>
-          <div class="slc-list" data-k="list" hidden></div>`;
+          <div class="slc-list" data-k="list" hidden></div>
+          <div class="slc-pager" data-k="pager" hidden></div>`;
         titleElem.parentNode.insertBefore(root, titleElem.nextSibling);
 
         els = { root };
         root.querySelectorAll('[data-k]').forEach(el => { els[el.dataset.k] = el; });
         root.querySelectorAll('.slc-tab').forEach(b => b.addEventListener('click', () => {
             view.tab = b.dataset.tab;
-            view.showAll = false;
+            view.page = 0;
             view.sig = '';
             render();
         }));
@@ -658,10 +692,6 @@
         els.selinv.addEventListener('click', invertSel);
         els.skipsel.addEventListener('click', skipChecked);
         els.unskipsel.addEventListener('click', unskipChecked);
-        els.qDemo.addEventListener('click', () => quickClean('demo'));
-        els.qSound.addEventListener('click', () => quickClean('soundtrack'));
-        els.qDlc.addEventListener('click', () => quickClean('dlc'));
-        els.qTool.addEventListener('click', () => quickClean('tool'));
         els.lang.addEventListener('click', () => {
             state.lang = state.lang === 'zh' ? 'en' : 'zh';
             saveState();
@@ -730,6 +760,156 @@
         applyLang();
         setInterval(render, 500);
         render();
+        natProbe();
+    }
+
+    /* ---------- native page pager (in-place, no navigation) ---------- */
+    // Steam's own pagination is a token chain: the link to page N+1 only exists inside page N's HTML.
+    // We keep every page's table HTML in memory (keyed by offset) and swap it into the native table.
+    // The browser never navigates, so the cleaning loop keeps running. Pages already read by
+    // "Scan list only" / cleaning are cached for free; only jumping beyond them fetches (one request per page).
+    const nat = { pages: new Map(), cur: null, table: null, bar: null, busy: false, gone: new Set(), sig: '' };
+    const natKeys = () => [...nat.pages.keys()].sort((a, b) => a - b);
+
+    function natStore(offset, tableHTML, next) {
+        if (tableHTML == null || nat.pages.has(offset)) return;
+        nat.pages.set(offset, { tableHTML, next: next ? { token: next.token, offset: next.offset } : null });
+    }
+
+    function natHideGone(root) {
+        if (!nat.gone.size) return;
+        root.querySelectorAll('a[href^="javascript:RemoveFreeLicense"]').forEach(a => {
+            const m = a.getAttribute('href').match(/RemoveFreeLicense\(\s*(\d+)\s*,/);
+            if (m && nat.gone.has(m[1])) { const tr = a.closest('tr'); if (tr) tr.remove(); }
+        });
+    }
+
+    // Called after every successful deletion so cached pages do not show rows that no longer exist.
+    function natGone(id) {
+        nat.gone.add(String(id));
+        if (nat.table) natHideGone(nat.table);
+    }
+
+    function natShow(offset) {
+        const p = nat.pages.get(offset);
+        if (!p || !nat.table) return;
+        nat.cur = offset;
+        nat.table.innerHTML = p.tableHTML;
+        natHideGone(nat.table);
+        nat.sig = '';
+        natBar();
+    }
+
+    async function natFetch(n) {
+        const url = `https://store.steampowered.com/account/licenses/?continuationToken=${n.token}&offset=${n.offset}`;
+        for (let k = 0; k < 3; k++) {
+            try {
+                const resp = await fetch(url, { credentials: 'same-origin' });
+                if (resp.ok) {
+                    const html = await resp.text();
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const tb = doc.querySelector('.account_table');
+                    natStore(n.offset, tb ? tb.innerHTML : null, findNext(html, n.offset));
+                    return nat.pages.has(n.offset);
+                }
+            } catch (e) {}
+            await sleep(rand(CFG.netRetryDelay));
+        }
+        log(t('nat_err'), 'warn');
+        return false;
+    }
+
+    async function natGoIndex(i) {
+        if (nat.busy) return;
+        nat.busy = true; nat.sig = ''; natBar();
+        try {
+            const keys = natKeys();
+            if (i > keys.length - 1) log(t('nat_scanfirst'), 'warn');
+            i = Math.min(Math.max(0, i), keys.length - 1);
+            natShow(keys[i]);
+        } finally { nat.busy = false; nat.sig = ''; natBar(); }
+    }
+
+    async function natGoOffset(n) { // n = {token, offset} taken from a native link
+        if (nat.busy) return;
+        if (!nat.pages.has(n.offset)) {
+            log(t('nat_scanfirst'), 'warn');
+            return;
+        }
+        natShow(n.offset);
+    }
+
+    function natBar() {
+        if (!nat.bar) return;
+        const keys = natKeys();
+        if (!keys.length) return;
+        const last = nat.pages.get(keys[keys.length - 1]);
+        const complete = !!last && !last.next;
+        const i = keys.indexOf(nat.cur);
+        const sig = [keys.length, i, complete, nat.busy, run.running, state.lang].join('|');
+        if (sig === nat.sig) return;
+        const ae = document.activeElement;
+        if (ae && ae.tagName === 'INPUT' && nat.bar.contains(ae)) return; // only protect typing in the page box
+        nat.sig = sig;
+        const bar = nat.bar;
+        bar.textContent = '';
+        const mk = (label, idx, dis) => {
+            const b = document.createElement('button');
+            b.textContent = label; b.disabled = dis || nat.busy;
+            b.addEventListener('click', () => natGoIndex(idx));
+            bar.appendChild(b);
+        };
+        const canNext = i < keys.length - 1;
+        mk('«', 0, i <= 0);
+        mk('‹', i - 1, i <= 0);
+        const s = document.createElement('span');
+        s.textContent = t('nat_page', i + 1, keys.length + (complete ? '' : '+'));
+        bar.appendChild(s);
+        mk('›', i + 1, !canNext);
+        mk('»', keys.length - 1, i >= keys.length - 1);
+        const inp = document.createElement('input');
+        inp.type = 'number'; inp.min = 1; inp.value = i + 1;
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') natGoIndex((parseInt(inp.value, 10) || 1) - 1); });
+        bar.appendChild(inp);
+        const go = document.createElement('button');
+        go.textContent = t('nat_go'); go.disabled = nat.busy;
+        go.addEventListener('click', () => natGoIndex((parseInt(inp.value, 10) || 1) - 1));
+        bar.appendChild(go);
+        const h = document.createElement('span');
+        h.className = 'nat-hint';
+        h.textContent = nat.busy ? t('nat_loading') : (run.running ? t('nat_cacheonly') : (!complete ? t('nat_scanhint') : ''));
+        bar.appendChild(h);
+    }
+
+    function natProbe() {
+        if (!nat.table) { log(t('nat_notable'), 'warn'); return; }
+        log(t('nat_ready'), 'info');
+    }
+
+    function natInit() {
+        nat.table = document.querySelector('.account_table');
+        if (!nat.table) return;
+        const m = location.search.match(/offset=(\d+)/);
+        const offset = m ? +m[1] : 0;
+        natStore(offset, nat.table.innerHTML, findNext(document.documentElement.innerHTML, offset));
+        nat.cur = offset;
+        const bar = document.createElement('div');
+        bar.id = 'slc-natbar';
+        nat.table.parentNode.insertBefore(bar, nat.table);
+        nat.bar = bar;
+        // Steam's own "next page" links would reload the page and kill a running clean: handle them in place.
+        document.addEventListener('click', e => {
+            const a = e.target.closest && e.target.closest('a[href*="continuationToken"]');
+            if (!a || a.closest('#slc') || !a.closest('.page_content')) return;
+            const mm = a.getAttribute('href').match(/continuationToken=([^&"'\s<>]+)(?:&amp;|&)offset=(\d+)/) ||
+                       a.getAttribute('href').match(/offset=(\d+)(?:&amp;|&)continuationToken=([^&"'\s<>]+)/);
+            if (!mm) return;
+            const isTokenFirst = /continuationToken=[^&]+(?:&amp;|&)offset=/.test(a.getAttribute('href'));
+            const n = isTokenFirst ? { token: mm[1], offset: +mm[2] } : { token: mm[2], offset: +mm[1] };
+            e.preventDefault();
+            natGoOffset(n);
+        }, true);
+        natBar();
     }
 
     /* ---------- unified filter ---------- */
@@ -803,12 +983,14 @@
     // Called whenever the user touches a filter control.
     // Returns true when the filter may be applied normally.
     function filterTouched() {
+        view.page = 0; // a new filter always starts from the first page
         if (needsScan(view.tab) && !hasScan()) { notifyUnscanned(false); return false; }
         if (view.tab === 'log') { view.tab = 'pending'; } // show the filtered result list
         return true;
     }
 
     function clearFilter() {
+        view.page = 0;
         view.f = newFilter();
         if (els) {
             els.fSearch.value = '';
@@ -821,12 +1003,13 @@
     }
 
     function toggleCatFilter(cat) {
+        view.page = 0;
         if (view.f.cats.has(cat)) view.f.cats.delete(cat); else view.f.cats.add(cat);
         view.sig = '';
         render();
     }
 
-    /* ---------- selection (acts on what is currently shown) ---------- */
+    /* ---------- selection (acts on the whole filtered result, across all pages) ---------- */
 
     function selectAll(checked) {
         if (run.running) return;
@@ -877,6 +1060,7 @@
             restored.forEach(g => { if (!have.has(g.packageId)) run.scanList.push(g); });
             log(t('unskipDone', ids.length, run.scanList.length), 'ok');
             view.tab = 'pending';
+            view.page = 0;
             view.sig = '';
             render();
         } else {
@@ -902,32 +1086,6 @@
         log(t('skipSelDone', added, state.skipped.length), 'ok');
         view.sig = '';
         render();
-    }
-
-    async function quickClean(cat) {
-        if (run.running) return;
-        if (!run.scanList.length) {
-            log(t('quickScanning'), 'info');
-            await scanOnly();
-            if (!run.scanList.length) { log(t('quickNoItems'), 'warn'); return; }
-        }
-        let count = 0;
-        run.scanList.forEach(g => {
-            g.checked = g.cats.includes(cat) && matchG(g, true);
-            if (g.checked) count++;
-        });
-        if (!count) {
-            log(t('quickNone', t('cat_' + cat)), 'warn');
-            view.tab = 'pending'; view.sig = ''; render();
-            return;
-        }
-        if (!window.confirm(t('confirmCount', count) + t('confirmDelete'))) {
-            view.tab = 'pending'; view.sig = ''; render();
-            return;
-        }
-        log(t('quickStart', count, t('cat_' + cat)), 'info');
-        view.tab = 'pending'; view.sig = ''; render();
-        await runCleaning(true);
     }
 
     function clearCooldown() {
@@ -1010,8 +1168,8 @@
         if (nearBottom) box.scrollTop = box.scrollHeight;
     }
 
-    const view = { tab: 'log', sig: '', showAll: false, skipSel: new Set(), f: newFilter(), rows: [], shown: [], optSig: '' };
-    const LIST_CAP = 300;
+    // page / pageSize are pure view state: changing them never touches run.* or localStorage records.
+    const view = { tab: 'log', sig: '', page: 0, pageSize: state.pageSize, skipSel: new Set(), f: newFilter(), rows: [], shown: [], optSig: '' };
 
     function fmtWhen(ts) {
         const d = new Date(ts), now = new Date();
@@ -1136,6 +1294,52 @@
         els.fMethod.value = cur || '';
     }
 
+    // Pager: only changes view.page / view.pageSize and redraws. No network, no run.* state is touched.
+    function renderPager(pages, total) {
+        const p = els.pager;
+        p.textContent = '';
+        p.hidden = total <= 0;
+        if (total <= 0) return;
+        const go = n => {
+            view.page = Math.min(Math.max(0, n), pages - 1);
+            view.sig = '';
+            render();
+        };
+        const mk = (label, n, dis) => {
+            const b = document.createElement('button');
+            b.textContent = label;
+            b.disabled = dis;
+            b.addEventListener('click', () => go(n));
+            p.appendChild(b);
+        };
+        mk('«', 0, view.page <= 0);
+        mk('‹', view.page - 1, view.page <= 0);
+        const s = document.createElement('span');
+        s.textContent = t('pg_page', view.page + 1, pages, total);
+        p.appendChild(s);
+        mk('›', view.page + 1, view.page >= pages - 1);
+        mk('»', pages - 1, view.page >= pages - 1);
+
+        const inp = document.createElement('input');
+        inp.type = 'number'; inp.min = 1; inp.max = pages; inp.value = view.page + 1;
+        inp.title = t('pg_jump');
+        inp.addEventListener('change', () => go((parseInt(inp.value, 10) || 1) - 1));
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') go((parseInt(inp.value, 10) || 1) - 1); });
+        p.appendChild(inp);
+
+        const sel = document.createElement('select');
+        sel.className = 'slc-pgsp';
+        [20, 50, 100, 200, 500].forEach(n => sel.add(new Option(t('pg_size', n), n)));
+        sel.value = String(view.pageSize);
+        sel.addEventListener('change', () => {
+            view.pageSize = +sel.value;
+            state.pageSize = view.pageSize;
+            saveState();
+            go(0);
+        });
+        p.appendChild(sel);
+    }
+
     function renderList(tab) {
         const rows = view.rows;
         const shown = view.shown = rows.filter(r => rowMatches(r));
@@ -1149,10 +1353,17 @@
             const emptyKey = { pending: 'emptyPending', perm: 'emptyPerm', deleted: 'emptyDeleted', skipped: 'emptySkipped', failed: 'emptyFailed' }[tab];
             d.textContent = (rows.length && fActive()) ? t('noFilterMatch') : t(emptyKey);
             box.appendChild(d);
+            els.pager.hidden = true;
             return;
         }
+
+        const pageSize = view.pageSize;
+        const pages = Math.max(1, Math.ceil(shown.length / pageSize));
+        view.page = Math.min(Math.max(0, view.page), pages - 1); // clamp: the list may shrink while cleaning
+        const start = view.page * pageSize;
+
         const frag = document.createDocumentFragment();
-        (view.showAll ? shown : shown.slice(0, LIST_CAP)).forEach(r => {
+        shown.slice(start, start + pageSize).forEach(r => {
             const row = document.createElement('div');
             row.className = 'slc-row' + (r.now ? ' now' : '') + (r.selectable ? ' sel' : '');
             if (r.selectable) {
@@ -1176,20 +1387,9 @@
             row.append(n, i, x);
             frag.appendChild(row);
         });
-        if (shown.length > LIST_CAP) {
-            const m = document.createElement('div');
-            m.className = 'slc-more';
-            if (!view.showAll) m.textContent = t('more', shown.length, LIST_CAP) + ' ';
-            const b = document.createElement('button');
-            b.className = 'slc-morebtn';
-            b.textContent = view.showAll ? t('showLess', LIST_CAP) : t('showAll', shown.length);
-            b.addEventListener('click', () => { view.showAll = !view.showAll; view.sig = ''; render(); });
-            m.appendChild(b);
-            if (view.showAll) frag.insertBefore(m, frag.firstChild);
-            else frag.appendChild(m);
-        }
         box.appendChild(frag);
         box.scrollTop = top;
+        renderPager(pages, shown.length);
     }
 
     function renderTabs() {
@@ -1213,6 +1413,7 @@
         els.log.hidden = !isLog;
         els.list.hidden = isLog;
         els.tbar.hidden = false; // the filter toolbar is always visible
+        if (isLog) els.pager.hidden = true;
 
         // toolbar: the filter is always there; selection actions only where they make sense.
         // Buttons stay clickable when nothing is scanned so they can explain why nothing happens.
@@ -1236,7 +1437,7 @@
             skipped: state.skipped.length,
             failed: `${run.retry.size}|${run.gaveUp.size}|${[...run.retry.values()].reduce((a, g) => a + g.attempts, 0)}`
         }[view.tab];
-        const sig = `${state.lang}|${view.tab}|${run.running}|${fToken()}|${view.showAll}|${token}`;
+        const sig = `${state.lang}|${view.tab}|${run.running}|${fToken()}|${view.page}|${view.pageSize}|${token}`;
         if (sig === view.sig) return;
         view.sig = sig;
 
@@ -1304,10 +1505,7 @@
         els.reset.disabled = run.running;
         els.clearcool.disabled = left <= 0;
         els.restoreskip.disabled = run.running || !backupHasContent(skipBackup);
-        els.qDemo.disabled = run.running;
-        els.qSound.disabled = run.running;
-        els.qDlc.disabled = run.running;
-        els.qTool.disabled = run.running;
+        natBar();
         renderTabs();
 
         document.title = run.running && ctl && ctl.total ? `[${ctl.finished}/${ctl.total}] ${origTitle}` : origTitle;
@@ -1399,6 +1597,9 @@
                 if (html === null) break;
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 const parsed = parseLicenses(doc);
+                const next = findNext(html, offset);
+                const natTb = doc.querySelector('.account_table');
+                natStore(offset, natTb ? natTb.innerHTML : null, next); // feeds the native pager cache for free
                 for (const g of parsed.removable) {
                     if (seen.has(g.packageId)) continue;
                     if (run.allowedSet && !run.allowedSet.has(g.packageId)) continue;
@@ -1417,7 +1618,6 @@
                 }
                 ctl.pages = page;
                 if (page % 5 === 1) log(t('readProg', page, ctl.total), 'info');
-                const next = findNext(html, offset);
                 if (!next) { log(t('readDone', page, ctl.total), 'info'); break; }
                 offset = next.offset;
                 url = `https://store.steampowered.com/account/licenses/?continuationToken=${next.token}&offset=${next.offset}`;
@@ -1480,6 +1680,7 @@
                 onSuccess();
                 state.removed++;
                 recordDeleted(g);
+                natGone(g.packageId);
                 run.removedRun++; run.processed++; ctl.finished++;
                 run.retry.delete(g.packageId);
                 saveState();
@@ -1726,6 +1927,7 @@
         log(completed ? t('scanDone', ctl.total) : t('scanStopped'), completed ? 'ok' : 'info');
         if (completed && run.scanList.length) {
             view.tab = 'pending';
+            view.page = 0;
             log(t('scanSwitched'), 'info');
         }
         view.sig = '';
