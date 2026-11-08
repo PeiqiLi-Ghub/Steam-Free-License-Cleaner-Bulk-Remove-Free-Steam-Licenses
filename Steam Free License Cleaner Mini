@@ -1,0 +1,80 @@
+// ==UserScript==
+// @name         Steam Free License Cleaner Mini
+// @namespace    https://github.com/LunaLi-hub/Steam-Free-License-Cleaner-Bulk-Remove-Free-Steam-Licenses
+// @version      1.0
+// @description  One button: scan all pages once, then remove every removable license. No prompts. Click again to stop.
+// @match        https://store.steampowered.com/account/licenses/*
+// @grant        none
+// @license      MIT
+// ==/UserScript==
+
+(function () {
+    'use strict';
+    const BASE = 'https://store.steampowered.com/account/licenses/';
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    let running = false, btn;
+
+    async function remove(id) {
+        try {
+            const r = await fetch(BASE.replace('licenses/', 'removelicense'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `sessionid=${encodeURIComponent(g_sessionID)}&packageid=${id}`
+            });
+            if (r.status === 429) return 84;
+            return r.ok ? (await r.json()).success : -1;
+        } catch (e) { return -1; }
+    }
+
+    async function main() {
+        if (running) { running = false; return; }
+        running = true;
+        const ids = new Set();
+        let url = BASE, offset = 0, removed = 0;
+
+        // scan every page once (the link to the next page is inside the current one)
+        while (running && url) {
+            btn.textContent = `Scanning… ${ids.size} found (click to stop)`;
+            let html = '';
+            try { html = await (await fetch(url, { credentials: 'same-origin' })).text(); } catch (e) { break; }
+            new DOMParser().parseFromString(html, 'text/html').querySelectorAll('a[href^="javascript:RemoveFreeLicense"]').forEach(a => {
+                const m = a.getAttribute('href').match(/RemoveFreeLicense\(\s*(\d+)\s*,/);
+                if (m) ids.add(m[1]);
+            });
+            let best = null, m;
+            const re = /continuationToken=([^&"'\s<>]+)(?:&amp;|&)offset=(\d+)/g;
+            while ((m = re.exec(html))) if (+m[2] > offset && (!best || +m[2] < best.o)) best = { t: m[1], o: +m[2] };
+            url = best ? `${BASE}?continuationToken=${best.t}&offset=${best.o}` : '';
+            if (best) offset = best.o;
+            await sleep(1000);
+        }
+
+        // remove them
+        let i = 0;
+        for (const id of ids) {
+            if (!running) break;
+            btn.textContent = `Removing ${++i}/${ids.size}, ${removed} removed (click to stop)`;
+            let code = await remove(id);
+            while (code === 84 && running) { // rate limited: wait 5 minutes, then retry
+                btn.textContent = `Rate limited, waiting 5 min… (click to stop)`;
+                for (let s = 0; s < 300 && running; s++) await sleep(1000);
+                code = await remove(id);
+            }
+            if (code === 1) removed++;
+            await sleep(2000);
+        }
+        running = false;
+        btn.textContent = `Done: ${removed} removed. Click to run again`;
+    }
+
+    function init() {
+        const h2 = document.querySelector('.page_content > h2');
+        if (!h2) return false;
+        btn = document.createElement('button');
+        btn.textContent = 'Scan and remove free licenses';
+        btn.addEventListener('click', main);
+        h2.after(btn);
+        return true;
+    }
+    if (!init()) new MutationObserver((_, ob) => { if (init()) ob.disconnect(); }).observe(document.body, { childList: true, subtree: true });
+})();
