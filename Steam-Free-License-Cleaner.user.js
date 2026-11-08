@@ -154,7 +154,7 @@
             scanDone: n => `Scan complete: ${n} removable items. See the Pending tab.`,
             scanStopped: 'Scan stopped', scanErr: m => `Scan error: ${m}`,
             scanSwitched: 'Switched to "Pending" tab — filter, check items, then press "Start cleaning".',
-            cat_demo: 'Demo/Trailer', cat_soundtrack: 'Soundtrack', cat_dlc: 'DLC', cat_tool: 'Tool', cat_game: 'Game', cat_risk29: 'May not be removable', tip_risk29: 'Steam may refuse to remove these (for example Free Weekend items, or items whose acquisition method was refused before). If Steam refuses, the item is skipped automatically and never retried. You can also add them to the skipped list yourself.',
+            cat_demo: 'Demo/Trailer', cat_soundtrack: 'Soundtrack', cat_dlc: 'DLC', cat_tool: 'Tool', cat_game: 'Game', cat_risk29: 'May not be removable', tip_risk29: 'These look like Free Weekend items, which Steam usually refuses to remove. If Steam refuses, the item is skipped automatically and never retried. You can also add them to the skipped list yourself.',
             sel_info: n => `${n} checked`,
             sel_hidden: h => ` (${h} hidden by filter)`,
             sel_all: 'Select all', sel_inv: 'Invert', sel_none: 'Clear',
@@ -168,7 +168,7 @@
             quickNoItems: 'Quick clean: no removable items found.',
             quickNone: c => `Quick clean: no "${c}" items.`,
             quickStart: (n, c) => `Quick clean: starting with ${n} "${c}" item(s).`,
-            riskHint: n => `Hint: ${n} item(s) were tagged "May not be removable" (Free Weekend names, or acquisition methods that Steam mostly refused before). Click that tag to review them; you can add them to skip.`,
+            riskHint: n => `Hint: ${n} item(s) look like Free Weekend items and were tagged "May not be removable". Click that tag to review them; you can add them to skip.`,
             sel_skip: 'Add checked to skip',
             tip_skipSel: 'Add the checked items that are currently shown to the skipped list so they are never deleted',
             skipSelNone: 'Add to skip: none of the items shown is checked.',
@@ -187,7 +187,7 @@
             fInfo: (a, b) => `Showing ${a} / ${b}`,
             pg_page: (p, n, total) => `Page ${p} / ${n} (${total} items)`,
             pg_size: n => `${n} / page`,
-            pg_jump: 'Go to page',
+            pg_jump: 'Go to page', pg_all: 'All',
             nat_page: (p, n) => `Page ${p} / ${n}`, nat_go: 'Go',
             nat_loading: 'Loading pages…',
             nat_cacheonly: 'Scan/cleaning in progress: only pages already read can be opened.',
@@ -276,7 +276,7 @@
             scanDone: n => `扫描完成：共 ${n} 个可删除项目，可在"待删除"页签查看`,
             scanStopped: '扫描已停止', scanErr: m => `扫描异常：${m}`,
             scanSwitched: '已切换到「待删除」页，筛选并勾选项目后点「开始清理」。',
-            cat_demo: '试玩/预告', cat_soundtrack: '原声', cat_dlc: 'DLC', cat_tool: '工具', cat_game: '游戏', cat_risk29: '可能删不掉', tip_risk29: 'Steam 可能会拒绝删除这些项目（例如免费周末，或获取方式以往多次被拒绝）。被拒绝时脚本会自动跳过且不再重试，你也可以提前把它们加入跳过列表。',
+            cat_demo: '试玩/预告', cat_soundtrack: '原声', cat_dlc: 'DLC', cat_tool: '工具', cat_game: '游戏', cat_risk29: '可能删不掉', tip_risk29: '这些看起来是免费周末项目，Steam 通常会拒绝删除。被拒绝时脚本会自动跳过且不再重试，你也可以提前把它们加入跳过列表。',
             sel_info: n => `已勾选 ${n}`,
             sel_hidden: h => `（另有 ${h} 个被筛选隐藏）`,
             sel_all: '全选', sel_inv: '反选', sel_none: '清空',
@@ -290,7 +290,7 @@
             quickNoItems: '快捷清理：未找到可删除项目。',
             quickNone: c => `快捷清理：没有「${c}」类项目。`,
             quickStart: (n, c) => `快捷清理：开始处理「${c}」共 ${n} 项。`,
-            riskHint: n => `提示：有 ${n} 个项目被标记为「可能删不掉」（免费周末，或获取方式以往多半被 Steam 拒绝）。点击该标签可集中查看，可勾选后加入跳过。`,
+            riskHint: n => `提示：有 ${n} 个项目看起来是免费周末，已标记为「可能删不掉」。点击该标签可集中查看，可勾选后加入跳过。`,
             sel_skip: '勾选项加入跳过',
             tip_skipSel: '将当前显示的已勾选项目加入跳过列表（永不删除）',
             skipSelNone: '加入跳过：当前显示的项目中没有勾选项。',
@@ -309,7 +309,7 @@
             fInfo: (a, b) => `显示 ${a} / ${b}`,
             pg_page: (p, n, total) => `第 ${p} / ${n} 页（共 ${total} 条）`,
             pg_size: n => `每页 ${n} 条`,
-            pg_jump: '跳转到页',
+            pg_jump: '跳转到页', pg_all: '全部',
             nat_page: (p, n) => `第 ${p} / ${n} 页`, nat_go: '跳转',
             nat_loading: '正在加载分页…',
             nat_cacheonly: '正在扫描/清理：只能翻已经读取完的页面。',
@@ -345,7 +345,7 @@
     if (typeof state.coolMaxMin !== 'number' || !(state.coolMaxMin >= 1)) state.coolMaxMin = CFG.coolMaxMin;
     if (state.coolMaxMin > CFG.coolMaxLimit) state.coolMaxMin = CFG.coolMaxLimit;
     if (state.coolMin > state.coolMaxMin) state.coolMin = state.coolMaxMin;
-    if (![20, 50, 100, 200, 500].includes(Number(state.pageSize))) state.pageSize = 50;
+    if (![20, 50, 100, 200, 500, 0].includes(Number(state.pageSize))) state.pageSize = 50; // 0 = all
     state.pageSize = Number(state.pageSize);
     const skipSet = new Set(state.skipped);
     if (!state.skippedInfo || typeof state.skippedInfo !== 'object') state.skippedInfo = {};
@@ -392,27 +392,13 @@
         state.skippedMeta[g.packageId] = skipMeta(g, from29);
     }
 
-    // "Likely 29" hint, learned from this browser's own history:
-    //  - acquisition methods where at least half of the past outcomes were a real error 29 (min. 2 cases)
-    //  - names that look like a Free Weekend
-    function methodStats() {
-        const st = new Map();
-        const bump = (m, k) => { if (!m) return; const o = st.get(m) || { s: 0, d: 0 }; o[k]++; st.set(m, o); };
-        for (const id of state.skipped) {
-            const m = state.skippedMeta[id];
-            if (m && m.x) bump(m.m, 's');
-        }
-        for (const e of deletedList) bump(e[3], 'd');
-        return st;
-    }
+    // "May not be removable" tag: only names that look like a Free Weekend.
+    // (Steam answers error 29 for those; anything else is simply tried and skipped automatically if refused.)
     function markRisk(list) {
-        const st = methodStats();
         let n = 0;
         for (const g of list) {
             g.cats = (g.cats || categorize(g.itemName)).filter(c => c !== 'risk29');
-            const o = g.method ? st.get(g.method) : null;
-            const byMethod = !!o && o.s >= 2 && o.s / (o.s + o.d) >= 0.5;
-            if (byMethod || FREE_WEEKEND_RE.test(g.itemName)) { g.cats.unshift('risk29'); n++; }
+            if (FREE_WEEKEND_RE.test(g.itemName)) { g.cats.unshift('risk29'); n++; }
         }
         return n;
     }
@@ -1329,7 +1315,7 @@
 
         const sel = document.createElement('select');
         sel.className = 'slc-pgsp';
-        [20, 50, 100, 200, 500].forEach(n => sel.add(new Option(t('pg_size', n), n)));
+        [20, 50, 100, 200, 500, 0].forEach(n => sel.add(new Option(n ? t('pg_size', n) : t('pg_all'), n)));
         sel.value = String(view.pageSize);
         sel.addEventListener('change', () => {
             view.pageSize = +sel.value;
@@ -1357,7 +1343,7 @@
             return;
         }
 
-        const pageSize = view.pageSize;
+        const pageSize = view.pageSize || shown.length; // 0 = all on one page
         const pages = Math.max(1, Math.ceil(shown.length / pageSize));
         view.page = Math.min(Math.max(0, view.page), pages - 1); // clamp: the list may shrink while cleaning
         const start = view.page * pageSize;
